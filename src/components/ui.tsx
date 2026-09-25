@@ -1,6 +1,6 @@
 // Small set of interface building blocks (in the spirit of shadcn/ui), styled with Tailwind.
 import Link from "next/link";
-import type { ComponentProps, ReactNode } from "react";
+import { cloneElement, isValidElement, useId, type ComponentProps, type ReactElement, type ReactNode } from "react";
 
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
@@ -122,6 +122,10 @@ export function DefinitionList({ items }: { items: [ReactNode, ReactNode][] }) {
 const inputClass =
   "block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base text-stone-900 shadow-sm placeholder:text-stone-400 aria-[invalid=true]:border-red-600 sm:text-sm";
 
+/**
+ * A labelled form control. Gives the control a unique id (several forms can share a page)
+ * and wires up the hint and error for screen readers.
+ */
 export function Field({
   label,
   name,
@@ -137,20 +141,31 @@ export function Field({
   required?: boolean;
   children: ReactNode;
 }) {
+  const id = `${name}-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
+  const control = isValidElement(children)
+    ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+        id,
+        "aria-describedby": describedBy,
+        "aria-invalid": error ? true : undefined,
+      })
+    : children;
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-stone-800">
+      <label htmlFor={id} className="block text-sm font-medium text-stone-800">
         {label}
         {required && <span className="text-red-700"> *</span>}
       </label>
       {hint && (
-        <p id={`${name}-hint`} className="text-xs text-stone-500">
+        <p id={hintId} className="text-xs text-stone-500">
           {hint}
         </p>
       )}
-      {children}
+      {control}
       {error && (
-        <p id={`${name}-error`} className="text-sm text-red-700">
+        <p id={errorId} className="text-sm text-red-700">
           {error}
         </p>
       )}
@@ -161,9 +176,7 @@ export function Field({
 export function Input({ error, ...props }: ComponentProps<"input"> & { error?: string }) {
   return (
     <input
-      id={props.id ?? props.name}
       aria-invalid={error ? true : undefined}
-      aria-describedby={error ? `${props.name}-error` : undefined}
       className={cn(inputClass, props.className)}
       {...props}
     />
@@ -173,9 +186,7 @@ export function Input({ error, ...props }: ComponentProps<"input"> & { error?: s
 export function Textarea({ error, ...props }: ComponentProps<"textarea"> & { error?: string }) {
   return (
     <textarea
-      id={props.id ?? props.name}
       aria-invalid={error ? true : undefined}
-      aria-describedby={error ? `${props.name}-error` : undefined}
       className={cn(inputClass, "min-h-24", props.className)}
       {...props}
     />
@@ -189,9 +200,7 @@ export function Select({ error, options, placeholder, ...props }: ComponentProps
 }) {
   return (
     <select
-      id={props.id ?? props.name}
       aria-invalid={error ? true : undefined}
-      aria-describedby={error ? `${props.name}-error` : undefined}
       className={cn(inputClass, props.className)}
       {...props}
     >

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { redirect } from "next/navigation";
 import type { ActionState } from "@/components/forms";
 import { friendlyError, requireStaff } from "@/lib/auth";
 import { lookupAbn } from "@/lib/abn";
@@ -95,7 +96,10 @@ export async function verifyCredential(clinicianId: string, credentialId: string
   });
   if (error) return { error: friendlyError(error) };
   revalidatePath("/verification");
-  return done(clinicianId, approve ? "Verified" : "Rejected: the clinician has been asked for a new copy");
+  done(clinicianId, "");
+  // The form disappears once the document is reviewed, so show the result on the page we came from.
+  const back = fd.get("return_to") === "verification" ? "/verification" : `/clinicians/${clinicianId}`;
+  redirect(`${back}?notice=${approve ? "verified" : "rejected"}`);
 }
 
 export async function recordSighted(clinicianId: string, _prev: ActionState, fd: FormData): Promise<ActionState> {

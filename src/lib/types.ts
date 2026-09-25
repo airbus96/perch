@@ -181,3 +181,9 @@ export interface StatusHistoryRow {
   by: string | null;
   at: string;
 }
+
+/** PostgREST returns one-to-one relations as an object and one-to-many as an array. */
+export function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
+  if (Array.isArray(v)) return v[0];
+  return v ?? undefined;
+}

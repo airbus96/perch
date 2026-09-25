@@ -412,6 +412,14 @@ d("database", () => {
       expect(await count("credential_expiring_staff")).toBe(2);
     });
 
+    it("pauses an active clinician with any missing required document", async () => {
+      const a = await db.createActiveClinician();
+      await db.q(POSTGRES, "update public.credentials set status = 'superseded' where clinician_id = $1 and type = 'drivers_licence'", [a.clinicianId]);
+      await db.q(SERVICE, "select public.run_scheduled_jobs('daily')");
+      const c = await db.one(POSTGRES, "select status, pause_reason from public.clinicians where id = $1", [a.clinicianId]);
+      expect(c).toEqual({ status: "paused", pause_reason: "credentials" });
+    });
+
     it("needs an expiry date to verify an expiring document", async () => {
       const a = await db.createActiveClinician();
       const [upload] = await db.q<{ id: string }>(

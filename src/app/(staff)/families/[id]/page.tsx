@@ -20,7 +20,7 @@ import { formatAuMobile } from "@/lib/phone";
 import { loadMatchClinicians, toMatchChild, toMatchFamily } from "@/lib/server/matching-data";
 import { createClient } from "@/lib/supabase/server";
 import { ageFrom, relativeHours, hoursSince, todayInAustralia } from "@/lib/time";
-import type { ChildRow, FamilyRow, MatchRow, StatusHistoryRow } from "@/lib/types";
+import { firstOf, type ChildRow, type FamilyRow, type MatchRow, type StatusHistoryRow } from "@/lib/types";
 import * as actions from "./actions";
 import {
   ChildForm,
@@ -33,11 +33,26 @@ import {
 
 export const metadata = { title: "Family" };
 
-type MatchWithClinician = MatchRow & { clinicians: { name: string } | null; intro_calls: { scheduled_at: string | null; outcome: string | null }[]; conversions: { first_session_at: string }[] };
+type MatchWithClinician = MatchRow & { clinicians: { name: string } | null; intro_calls: { scheduled_at: string | null; outcome: string | null }[]; conversions: { first_session_at: string } | { first_session_at: string }[] | null };
 
-export default async function FamilyPage({ params }: PageProps<"/families/[id]">) {
+const NOTICES: Record<string, string> = {
+  intake_ready_to_match: "Intake saved. The family is ready to match: pick a shortlist below.",
+  intake_needs_follow_up: "Intake saved. The family is back in Contacted for follow-up.",
+  intake_not_suitable: "Intake saved. The family has been sent the signposting message.",
+  shortlist: "Shortlist saved. Approve it to send the first offer.",
+  shortlist_complex: "Shortlist saved. A clinical lead needs to approve it.",
+  approved: "Approved. The first offer has been sent.",
+  waitlist: "Moved to the waitlist. You'll be alerted when capacity frees up.",
+  withdrawn: "Offer withdrawn. The next clinician on the shortlist (if any) has been offered.",
+  intro: "Intro call outcome saved.",
+  converted: "First session confirmed. The family is converted 🎉",
+  status: "Status updated.",
+};
+
+export default async function FamilyPage({ params, searchParams }: PageProps<"/families/[id]">) {
   const viewer = await requireStaff();
   const { id } = await params;
+  const { notice } = await searchParams;
   const supabase = await createClient();
 
   const { data: family } = await supabase.from("families").select("*").eq("id", id).maybeSingle<FamilyRow>();
@@ -111,6 +126,7 @@ export default async function FamilyPage({ params }: PageProps<"/families/[id]">
         actions={<Link href="/families" className="text-sm text-brand-700 underline">← All families</Link>}
       />
 
+      {typeof notice === "string" && NOTICES[notice] && <Alert tone="green">{NOTICES[notice]}</Alert>}
       {family.lat === null && <Alert>This suburb isn&apos;t on the map yet, so matching can only use clinicians&apos; suburb lists. Check the suburb and postcode below.</Alert>}
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -228,7 +244,7 @@ export default async function FamilyPage({ params }: PageProps<"/families/[id]">
                   ["Accepted", <When key="a" at={accepted.responded_at} uk={viewer.showUkTime} />],
                   ["Intro call", accepted.intro_calls[0]?.scheduled_at ? <When key="i" at={accepted.intro_calls[0].scheduled_at} uk={viewer.showUkTime} /> : "Not booked yet"],
                   ["Intro outcome", accepted.intro_calls.find((c) => c.outcome)?.outcome?.replaceAll("_", " ")],
-                  ["First session", accepted.conversions[0] ? <DateOnly key="f" date={accepted.conversions[0].first_session_at} /> : null],
+                  ["First session", <DateOnly key="f" date={firstOf(accepted.conversions)?.first_session_at} />],
                 ]}
               />
               {family.status !== "converted" && (

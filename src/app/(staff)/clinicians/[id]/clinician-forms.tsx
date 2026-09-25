@@ -33,10 +33,16 @@ export function StatusForm({ action, options }: { action: FormAction; options: C
   );
 }
 
-export function VerifyForm({ action, type, expiresAt }: { action: FormAction; type: CredentialType; expiresAt: string | null }) {
+export function VerifyForm({ action, type, expiresAt, returnTo }: {
+  action: FormAction;
+  type: CredentialType;
+  expiresAt: string | null;
+  returnTo?: "verification";
+}) {
   const info = CREDENTIALS[type];
   return (
     <ActionForm action={action} className="space-y-3">
+      {returnTo && <input type="hidden" name="return_to" value={returnTo} />}
       <p className="text-xs text-stone-600">
         {info.verification}
         {info.registerUrl && (

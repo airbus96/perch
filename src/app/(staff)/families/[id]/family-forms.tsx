@@ -130,7 +130,7 @@ export function ChildForm({ action, child }: { action: FormAction; child: ChildR
 export function StatusForm({ action, options }: { action: FormAction; options: FamilyStatus[] }) {
   return (
     <ActionForm action={action} className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
+      <div className="space-y-3">
         <Field label="Move to" name="status">
           <Select name="status" placeholder="Choose…" options={options.map((s) => [s, FAMILY_STATUS_LABELS[s]] as const)} />
         </Field>
@@ -154,17 +154,20 @@ export function IntakeForm({ action, family, child, previous }: {
   return (
     <ActionForm action={action}>
       <ol className="list-decimal space-y-5 pl-5 marker:font-semibold marker:text-brand-700">
-        <li className="space-y-3">
-          <p className="font-medium">What&apos;s worrying you most about {child.first_name}&apos;s communication or development?</p>
-          <Textarea name="needs" defaultValue={p.needs ?? ""} aria-label="Needs" />
+        <li>
+          <Field label={<>What&apos;s worrying you most about {child.first_name}&apos;s communication or development?</>} name="needs">
+            <Textarea name="needs" defaultValue={p.needs ?? ""} />
+          </Field>
         </li>
-        <li className="space-y-3">
-          <p className="font-medium">Have they seen a speech pathologist or OT before? Any reports?</p>
-          <Textarea name="history" defaultValue={p.history ?? ""} aria-label="History" />
+        <li>
+          <Field label="Have they seen a speech pathologist or OT before? Any reports?" name="history">
+            <Textarea name="history" defaultValue={p.history ?? ""} />
+          </Field>
         </li>
-        <li className="space-y-3">
-          <p className="font-medium">Any diagnoses you&apos;d like to share? (Only what the family chooses to tell us.)</p>
-          <Input name="diagnoses" defaultValue={p.diagnoses ?? ""} aria-label="Diagnoses shared" />
+        <li>
+          <Field label="Any diagnoses you'd like to share?" name="diagnoses" hint="Only what the family chooses to tell us.">
+            <Input name="diagnoses" defaultValue={p.diagnoses ?? ""} />
+          </Field>
         </li>
         <li className="space-y-3">
           <p className="font-medium">Funding and NDIS plan</p>
@@ -183,9 +186,10 @@ export function IntakeForm({ action, family, child, previous }: {
             </Field>
           </div>
         </li>
-        <li className="space-y-3">
-          <p className="font-medium">Home visits: anything the clinician should know about access? (parking, stairs, pets)</p>
-          <Input name="home_access" defaultValue={p.home_access ?? ""} aria-label="Home access notes" />
+        <li>
+          <Field label="Home visits: anything the clinician should know about access?" name="home_access" hint="Parking, stairs, pets">
+            <Input name="home_access" defaultValue={p.home_access ?? ""} />
+          </Field>
         </li>
         <li className="space-y-3">
           <p className="font-medium">About {child.first_name}: times, language and preferences</p>
@@ -268,10 +272,7 @@ export function WithdrawForm({ action }: { action: FormAction }) {
   return (
     <ActionForm action={action} confirm="Withdraw this offer? The next clinician on the shortlist will be offered.">
       <div className="flex gap-2">
-        <label className="sr-only" htmlFor="withdraw-reason">
-          Reason
-        </label>
-        <Input id="withdraw-reason" name="reason" placeholder="Reason" className="min-w-0" />
+        <Input name="reason" aria-label="Reason for withdrawing" placeholder="Reason" className="min-w-0" />
         <SubmitButton variant="secondary" size="sm">
           Withdraw
         </SubmitButton>

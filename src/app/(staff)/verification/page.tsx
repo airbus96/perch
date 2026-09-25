@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { When, credentialLabel } from "@/components/display";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { CredentialRow } from "@/lib/types";
@@ -9,8 +9,9 @@ import { VerifyForm } from "../clinicians/[id]/clinician-forms";
 
 export const metadata = { title: "Verification queue" };
 
-export default async function VerificationPage() {
+export default async function VerificationPage({ searchParams }: PageProps<"/verification">) {
   await requireStaff();
+  const { notice } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase
     .from("credentials")
@@ -25,6 +26,8 @@ export default async function VerificationPage() {
         title="Verification queue"
         description="Documents clinicians have uploaded. Check each against the register or certificate, then verify. Paused clinicians go back to Active automatically once everything is current."
       />
+      {notice === "verified" && <div className="mb-4"><Alert tone="green">Verified. If the clinician was paused for credentials and everything is now current, they&apos;re active again.</Alert></div>}
+      {notice === "rejected" && <div className="mb-4"><Alert tone="green">Rejected. The clinician has been asked for a new copy.</Alert></div>}
       {rows.length === 0 ? (
         <EmptyState>Nothing waiting. Nice work.</EmptyState>
       ) : (
@@ -53,7 +56,7 @@ export default async function VerificationPage() {
                     "No file attached"
                   )}
                 </p>
-                <VerifyForm action={verifyCredential.bind(null, c.clinician_id, c.id)} type={c.type} expiresAt={c.expires_at} />
+                <VerifyForm action={verifyCredential.bind(null, c.clinician_id, c.id)} type={c.type} expiresAt={c.expires_at} returnTo="verification" />
               </Card>
             </li>
           ))}

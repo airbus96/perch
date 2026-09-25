@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { redirect } from "next/navigation";
 import type { ActionState } from "@/components/forms";
 import { friendlyError, requireStaff } from "@/lib/auth";
 import { CONCERNS, FAMILY_STATUSES, FUNDING_TYPES, SERVICE_TYPES, TIME_BLOCKS, type FamilyStatus } from "@/lib/domain";
@@ -20,6 +21,13 @@ const text = (fd: FormData, k: string) => {
 };
 const list = (fd: FormData, k: string, allowed?: readonly string[]) =>
   fd.getAll(k).filter((v): v is string => typeof v === "string" && (!allowed || allowed.includes(v)));
+
+/** For actions that move the family on (the form that was used disappears): reload with a notice. */
+function doneAndShow(familyId: string, notice: string): never {
+  revalidatePath(`/families/${familyId}`);
+  after(drainOutboxQuietly);
+  redirect(`/families/${familyId}?notice=${notice}`);
+}
 
 function done(familyId: string, message: string): ActionState {
   revalidatePath(`/families/${familyId}`);
@@ -99,7 +107,7 @@ export async function changeStatus(familyId: string, _prev: ActionState, fd: For
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_family_status", { p_family: familyId, p_status: status, p_reason: text(fd, "reason") });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, "Status updated");
+  doneAndShow(familyId, "status");
 }
 
 export async function completeIntake(familyId: string, childId: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -144,7 +152,7 @@ export async function completeIntake(familyId: string, childId: string, _prev: A
     p_reason: text(fd, "outcome_reason"),
   });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, "Intake saved");
+  doneAndShow(familyId, `intake_${outcome}`);
 }
 
 /** Saves the coordinator's picks as the shortlist. Scores are recalculated here, never taken from the browser. */
@@ -176,7 +184,7 @@ export async function proposeShortlist(familyId: string, childId: string, _prev:
     }));
   const { error } = await supabase.rpc("propose_shortlist", { p_child: childId, p_items: items });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, family.complex_case ? "Shortlist saved. A clinical lead needs to approve it." : "Shortlist saved. Approve it to send the first offer.");
+  doneAndShow(familyId, family.complex_case ? "shortlist_complex" : "shortlist");
 }
 
 export async function approveShortlist(familyId: string, childId: string, _prev: ActionState, _fd: FormData): Promise<ActionState> {
@@ -185,7 +193,7 @@ export async function approveShortlist(familyId: string, childId: string, _prev:
   const supabase = await createClient();
   const { error } = await supabase.rpc("approve_shortlist", { p_child: childId });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, "Approved. The offer has been sent.");
+  doneAndShow(familyId, "approved");
 }
 
 export async function withdrawOffer(familyId: string, matchId: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -194,7 +202,7 @@ export async function withdrawOffer(familyId: string, matchId: string, _prev: Ac
   const supabase = await createClient();
   const { error } = await supabase.rpc("withdraw_offer", { p_match: matchId, p_reason: reason });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, "Offer withdrawn");
+  doneAndShow(familyId, "withdrawn");
 }
 
 export async function moveToWaitlist(familyId: string, childId: string, _prev: ActionState, _fd: FormData): Promise<ActionState> {
@@ -211,7 +219,7 @@ export async function moveToWaitlist(familyId: string, childId: string, _prev: A
   const reason = result.waitlist?.reason ?? "Coordinator moved to waitlist";
   const { error } = await supabase.rpc("set_waitlist", { p_family: familyId, p_reason: reason, p_codes: result.waitlist?.codes ?? [] });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, "Moved to the waitlist");
+  doneAndShow(familyId, "waitlist");
 }
 
 export async function recordIntroOnBehalf(familyId: string, matchId: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -223,7 +231,7 @@ export async function recordIntroOnBehalf(familyId: string, matchId: string, _pr
     p_reason: text(fd, "reason"),
   });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, "Intro call outcome saved");
+  doneAndShow(familyId, "intro");
 }
 
 export async function confirmFirstSessionOnBehalf(familyId: string, matchId: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -231,5 +239,5 @@ export async function confirmFirstSessionOnBehalf(familyId: string, matchId: str
   const supabase = await createClient();
   const { error } = await supabase.rpc("confirm_first_session", { p_match: matchId, p_date: text(fd, "date") });
   if (error) return { error: friendlyError(error) };
-  return done(familyId, "Converted 🎉");
+  doneAndShow(familyId, "converted");
 }

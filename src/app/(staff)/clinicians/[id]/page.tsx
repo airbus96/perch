@@ -30,9 +30,10 @@ import { AbnForm, AgreementSignedForm, NotesForm, OffboardingForm, SightedForm, 
 
 export const metadata = { title: "Clinician" };
 
-export default async function ClinicianPage({ params }: PageProps<"/clinicians/[id]">) {
+export default async function ClinicianPage({ params, searchParams }: PageProps<"/clinicians/[id]">) {
   const viewer = await requireStaff();
   const { id } = await params;
+  const { notice } = await searchParams;
   const supabase = await createClient();
   const { data: clinician } = await supabase.from("clinicians").select("*").eq("id", id).maybeSingle<ClinicianRow>();
   if (!clinician) notFound();
@@ -79,6 +80,8 @@ export default async function ClinicianPage({ params }: PageProps<"/clinicians/[
         actions={<Link href="/clinicians" className="text-sm text-brand-700 underline">← All clinicians</Link>}
       />
 
+      {notice === "verified" && <Alert tone="green">Document verified.</Alert>}
+      {notice === "rejected" && <Alert tone="green">Document rejected. The clinician has been asked for a new copy.</Alert>}
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
           {clinician.status !== "active" && clinician.status !== "offboarded" && (

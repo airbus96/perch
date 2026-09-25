@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "./ui";
 
-export function NavLinks({ links }: { links: { href: string; label: string; count?: number }[] }) {
+export function NavLinks({ links, home }: { links: { href: string; label: string; count?: number }[]; home: string }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Main" className="-mx-4 overflow-x-auto px-4">
       <ul className="flex gap-1 whitespace-nowrap">
         {links.map((l) => {
-          const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+          // The home link only lights up on the home page itself, not on every page below it.
+          const active = pathname === l.href || (l.href !== home && pathname.startsWith(`${l.href}/`));
           return (
             <li key={l.href}>
               <Link

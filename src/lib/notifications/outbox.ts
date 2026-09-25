@@ -4,6 +4,7 @@ import { createAdminClient } from "../supabase/admin";
 import { env } from "../env";
 import { buildVariables, renderTemplate } from "./render";
 import { sendEmail, sendSlack, sendSms, type SendResult } from "./providers";
+import { firstOf } from "../types";
 
 interface QueuedMessage {
   id: string;
@@ -36,7 +37,7 @@ async function stillRelevant(db: SupabaseClient, m: QueuedMessage): Promise<stri
     case "first_session_check": {
       const { data } = await db.from("matches").select("state, conversions(id)").eq("id", matchId).maybeSingle();
       if (!data || data.state !== "accepted") return "Referral no longer active";
-      return (data.conversions as unknown[] | null)?.length ? "First session already confirmed" : null;
+      return firstOf(data.conversions as unknown) ? "First session already confirmed" : null;
     }
     case "intake_reminder": {
       const { data } = await db.from("families").select("status").eq("id", m.recipient_id).maybeSingle();

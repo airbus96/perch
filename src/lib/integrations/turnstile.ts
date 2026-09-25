@@ -1,9 +1,12 @@
 import "server-only";
 
-/** Cloudflare Turnstile check for public forms. Passes when not configured (local development). */
+/**
+ * Cloudflare Turnstile check for public forms. Fails closed in production when no secret is set,
+ * unless TURNSTILE_DISABLED=true (local stacks and previews only).
+ */
 export async function verifyTurnstile(token: string | null, ip: string | null): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return process.env.NODE_ENV !== "production";
+  if (!secret) return process.env.TURNSTILE_DISABLED === "true" || process.env.NODE_ENV !== "production";
   if (!token) return false;
   const form = new URLSearchParams({ secret, response: token });
   if (ip) form.set("remoteip", ip);

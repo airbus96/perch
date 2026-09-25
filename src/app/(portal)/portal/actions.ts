@@ -30,7 +30,7 @@ export async function respondToOffer(matchId: string, _prev: ActionState, fd: Fo
   if (error) return { error: friendlyError(error) };
   after(drainOutboxQuietly);
   revalidatePath("/portal", "layout");
-  if (accept) redirect(`/portal/families?accepted=${matchId}`);
+  if (accept) redirect("/portal/families?notice=accepted");
   return { ok: true, message: "Thanks for letting us know. We'll offer it to someone else." };
 }
 
@@ -38,14 +38,18 @@ export async function recordIntro(matchId: string, _prev: ActionState, fd: FormD
   await requireClinician();
   const supabase = await createClient();
   const { error } = await supabase.rpc("record_intro_outcome", { p_match: matchId, p_outcome: fd.get("outcome"), p_reason: text(fd, "reason") });
-  return error ? { error: friendlyError(error) } : done(["/portal/families"], "Saved. Thanks!");
+  if (error) return { error: friendlyError(error) };
+  done(["/portal/families"], "");
+  redirect(`/portal/families?notice=${fd.get("outcome") === "going_ahead" ? "intro" : "not_going_ahead"}`);
 }
 
 export async function confirmFirstSession(matchId: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
   await requireClinician();
   const supabase = await createClient();
   const { error } = await supabase.rpc("confirm_first_session", { p_match: matchId, p_date: text(fd, "date") });
-  return error ? { error: friendlyError(error) } : done(["/portal/families"], "Great, first session confirmed 🎉");
+  if (error) return { error: friendlyError(error) };
+  done(["/portal/families"], "");
+  redirect("/portal/families?notice=converted");
 }
 
 async function me() {

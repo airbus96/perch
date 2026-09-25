@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run src",
+    "test:db": "vitest run tests/db",
+    "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -29,5 +33,8 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.2"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }

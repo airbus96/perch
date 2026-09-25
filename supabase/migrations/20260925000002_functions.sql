@@ -1346,6 +1346,16 @@ begin
                          'credential_type', r.type));
   end loop;
 
+  -- 1b. Safety net: any Active clinician with a gap in required documents (for whatever reason,
+  --     e.g. they started doing home visits without a sighted licence) is paused too.
+  for r in
+    select c.id from public.clinicians c
+     where c.status = 'active'
+       and cardinality(private.credential_gaps(c.id, c.profession, c.home_visits)) > 0
+  loop
+    perform private.pause_for_credentials(r.id, 'Required documents missing');
+  end loop;
+
   -- 2. Reminders at 60 / 30 / 7 days (only the nearest band, once each).
   for r in
     select cr.id, cr.clinician_id, cr.type, cr.expires_at, (cr.expires_at - v_today) as days_left

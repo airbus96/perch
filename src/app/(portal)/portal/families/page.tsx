@@ -5,7 +5,7 @@ import { CONCERN_LABELS, FUNDING_LABELS, SERVICE_LABELS, TIME_BLOCK_LABELS, type
 import { formatAuMobile } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { ageFrom } from "@/lib/time";
-import type { ChildRow, FamilyRow, MatchRow } from "@/lib/types";
+import { firstOf, type ChildRow, type FamilyRow, type MatchRow } from "@/lib/types";
 import { confirmFirstSession, recordIntro } from "../actions";
 import { FirstSessionForm, IntroOutcomeForm } from "@/components/referral-forms";
 
@@ -15,12 +15,19 @@ type Row = MatchRow & {
   families: FamilyRow;
   children: ChildRow;
   intro_calls: { scheduled_at: string | null; outcome: string | null }[];
-  conversions: { first_session_at: string }[];
+  conversions: { first_session_at: string } | { first_session_at: string }[] | null;
+};
+
+const NOTICES: Record<string, string> = {
+  accepted: "Thanks for accepting! We've sent the family your intro-call link. Their details are below.",
+  intro: "Saved. Let us know once the first session is booked.",
+  not_going_ahead: "Thanks for letting us know. We'll find the family another clinician.",
+  converted: "Great, first session confirmed 🎉 From here the family is managed in your Halaxy.",
 };
 
 export default async function MyFamilies({ searchParams }: PageProps<"/portal/families">) {
   const viewer = await requireClinician();
-  const { accepted } = await searchParams;
+  const { notice } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase
     .from("matches")
@@ -34,7 +41,7 @@ export default async function MyFamilies({ searchParams }: PageProps<"/portal/fa
   return (
     <div className="space-y-6">
       <PageHeader title="My families" description="Families you've accepted. Once the first session is booked, they're managed in your Halaxy." />
-      {accepted && <Alert tone="green">Thanks for accepting! We&apos;ve sent the family your intro-call link. Their details are below.</Alert>}
+      {typeof notice === "string" && NOTICES[notice] && <Alert tone="green">{NOTICES[notice]}</Alert>}
       {rows.length === 0 ? (
         <EmptyState>No families yet.</EmptyState>
       ) : (
@@ -43,7 +50,7 @@ export default async function MyFamilies({ searchParams }: PageProps<"/portal/fa
           const c = r.children;
           const intro = r.intro_calls.find((i) => i.scheduled_at);
           const outcome = r.intro_calls.find((i) => i.outcome)?.outcome;
-          const converted = r.conversions[0];
+          const converted = firstOf(r.conversions);
           return (
             <Card key={r.id} id={r.id}>
               <CardTitle>
