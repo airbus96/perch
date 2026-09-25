@@ -69,3 +69,11 @@ export function relativeHours(hours: number): string {
   if (hours < 48) return `${Math.round(hours)}h`;
   return `${Math.round(hours / 24)}d`;
 }
+
+export function isoDaysAgo(days: number, now = new Date()): string {
+  return new Date(now.getTime() - days * 86_400_000).toISOString();
+}
+
+export function daysSince(v: Input, now = new Date()): number {
+  return hoursSince(v, now) / 24;
+}

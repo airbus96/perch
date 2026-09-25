@@ -52,7 +52,8 @@ grant execute on function
   public.get_my_offers(),
   public.complete_intake(uuid, public.intake_outcome, jsonb, text, text),
   public.set_waitlist(uuid, text, text[]),
-  public.set_my_preferences(boolean)
+  public.set_my_preferences(boolean),
+  public.run_scheduled_jobs(text)          -- admins can run jobs by hand from Settings
 to authenticated;
 
 -- server-only RPCs: public forms, webhooks, one-click links, scheduled jobs

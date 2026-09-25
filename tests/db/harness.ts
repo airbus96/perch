@@ -86,7 +86,7 @@ export class TestDb {
   // Fixtures (inserted as postgres, bypassing RLS)
   // ---------------------------------------------------------------------------
 
-  async createUser(role: "admin" | "coordinator" | "clinical_lead" | "clinician", name = role): Promise<string> {
+  async createUser(role: "admin" | "coordinator" | "clinical_lead" | "clinician", name: string = role): Promise<string> {
     const id = randomUUID();
     const email = `${name.replace(/\W/g, "").toLowerCase()}-${id.slice(0, 6)}@example.com`;
     await this.q(POSTGRES, "insert into auth.users (id, email) values ($1, $2)", [id, email]);
