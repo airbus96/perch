@@ -234,3 +234,18 @@ create policy credential_files_self_upload on storage.objects for insert to auth
 
 grant execute on function public.claim_messages(integer), public.complete_message(uuid, public.message_status, text, text)
   to service_role;
+
+-- Supabase grants EXECUTE on new public functions to every signed-in user by default.
+-- Take the server-only ones back, so a logged-in clinician can't call them through the API
+-- (claim_messages, for example, would hand over queued messages with contact details and tokens).
+revoke execute on function
+  public.submit_enquiry(jsonb),
+  public.submit_application(jsonb),
+  public.record_booking(text, uuid, text, timestamptz, text, boolean),
+  public.record_agreement_signed(text, timestamptz),
+  public.confirm_first_session_by_token(text, date),
+  public.peek_action_token(text),
+  public.check_rate_limit(text, integer, integer),
+  public.claim_messages(integer),
+  public.complete_message(uuid, public.message_status, text, text)
+from authenticated;

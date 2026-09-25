@@ -29,6 +29,21 @@ d("database", () => {
       await expect(db.q(ANON, "select public.submit_enquiry('{}')")).rejects.toThrow(/permission denied/);
     });
 
+    it("keeps server-only functions away from signed-in users", async () => {
+      const { userId } = await db.createActiveClinician();
+      for (const call of [
+        "select * from public.claim_messages(10)",
+        "select public.complete_message(gen_random_uuid(), 'sent')",
+        "select public.submit_enquiry('{}')",
+        "select public.record_booking('intake', null, 'x@example.com', now(), 'u')",
+        "select public.peek_action_token('x')",
+        "select public.check_rate_limit('k', 1, 60)",
+      ]) {
+        await expect(db.q(user(userId), call)).rejects.toThrow(/permission denied/);
+        await expect(db.q(user(coordinator), call)).rejects.toThrow(/permission denied/);
+      }
+    });
+
     it("hides everything from staff who haven't completed multi-factor login", async () => {
       await db.submitEnquiry();
       const aal1 = await db.q(user(coordinator, "aal1"), "select id from public.families");
